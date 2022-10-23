@@ -18,7 +18,7 @@
   },
   "homepage": "https://github.com/maddbuzz/frontend-project-11#readme",
   "devDependencies": {
-    "@webpack-cli/generators": "^2.5.0",
+    "@webpack-cli/generators": "^0.1.9",
     "css-loader": "^6.7.1",
     "eslint": "^8.26.0",
     "eslint-config-airbnb-base": "^15.0.0",
