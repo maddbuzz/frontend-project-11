@@ -1,5 +1,5 @@
 [![Actions Status](https://github.com/maddbuzz/frontend-project-11/workflows/hexlet-check/badge.svg)](https://github.com/maddbuzz/frontend-project-11/actions)
-[![Actions Status](https://github.com/maddbuzz/frontend-project-11/actions/workflows/nodejs.yml/badge.svg)](https://github.com/maddbuzz/frontend-project-11/actions/workflows/nodejs.yml)
+[![github action status](https://github.com/maddbuzz/frontend-project-11/workflows/Node%20CI/badge.svg)](https://github.com/maddbuzz/frontend-project-11/actions)
 [![Maintainability](https://api.codeclimate.com/v1/badges/3b052a146bd60339f386/maintainability)](https://codeclimate.com/github/maddbuzz/frontend-project-11/maintainability)
 
 # Rss Reader
