@@ -1,4 +1,5 @@
 import 'bootstrap';
 import './styles.scss';
+import app from './app.js';
 
-console.log('Hello Biggy World!');
+app();
