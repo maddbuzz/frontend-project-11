@@ -6,34 +6,39 @@ const switchControlsDisabled = (elements, isDisabled) => {
 
 const handleProcessFeedback = (elements, value) => {
   const { success, failure } = value;
-  const { formEl, inputEl, feedbackEl } = elements;
+  const {
+    feedsEl, formEl, inputEl, feedbackEl,
+  } = elements;
   if (failure) {
     inputEl.classList.add('is-invalid');
+    feedbackEl.classList.remove('text-success');
     feedbackEl.classList.add('text-danger');
     feedbackEl.textContent = failure;
-  } else {
+  }
+  if (success) {
     inputEl.classList.remove('is-invalid');
     feedbackEl.classList.remove('text-danger');
+    feedbackEl.classList.add('text-success');
     feedbackEl.textContent = success;
     formEl.reset();
-    // document.querySelector('.form-floating')
-    // formEl.elements.url.click();
-    // formEl.elements.url.focus();
-    // formEl.querySelector('input').focus();
-    // formEl.focus();
+    feedsEl.removeAttribute('hidden');
   }
 };
 
 const handleProcessState = (elements, value) => {
   switch (value) {
-    case 'waitingForUrl':
+    case 'waitingForInput':
       switchControlsDisabled(elements, false);
+      elements.inputEl.focus();
       break;
-    case 'validatingUrl':
+
+    case 'validatingInput':
       switchControlsDisabled(elements, true);
       break;
+
     case 'loadingFeed':
       break;
+
     default:
       throw new Error(`Unknown process state ${value}`);
   }
@@ -43,17 +48,24 @@ const handleProcessState = (elements, value) => {
 // По сути, в представлении происходит отображение модели на страницу
 // Для оптимизации рендер происходит точечно в зависимости от того, какая часть модели изменилась
 const renderView = (elements) => (path, value) => {
-  // console.log(path, value);
   switch (path) {
-    case 'form.processState':
+    case 'aggregator.processState':
       handleProcessState(elements, value);
       break;
 
-    case 'form.processFeedback':
+    case 'aggregator.processFeedback':
       handleProcessFeedback(elements, value);
       break;
 
+    case 'aggregator.feedsURLs': {
+      const li = document.createElement('li');
+      li.textContent = value.at(-1);
+      elements.feedsListEl.append(li);
+      break;
+    }
+
     default:
+      // console.log(path, value);
       break;
   }
 };

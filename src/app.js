@@ -25,13 +25,15 @@ const app = () => {
     inputEl: document.getElementById('url-input'),
     submitEl: document.querySelector('button[type="submit"]'),
     feedbackEl: document.querySelector('.feedback'),
+    feedsEl: document.querySelector('.feeds'),
+    feedsListEl: document.querySelector('.feeds ul'),
   };
 
   // Модель ничего не знает о контроллерах и о представлении. В ней не хранятся DOM-элементы.
   const state = {
-    form: {
+    aggregator: {
       feedsURLs: [],
-      processState: 'waitingForUrl',
+      processState: 'waitingForInput',
       processFeedback: { success: undefined, failure: undefined },
     },
   };
@@ -44,22 +46,23 @@ const app = () => {
     e.preventDefault();
     const formData = new FormData(e.target);
     const url = formData.get('url').trim();
-    watchState.form.processState = 'validatingUrl';
+    watchState.aggregator.processState = 'validatingInput';
+    // ...в случае промисов весь код превращается в непрерывную цепочку промисов:
     validate({ url })
       .then((validationErrors) => {
         if (!_isEmpty(validationErrors)) {
-          watchState.form.processFeedback = { failure: 'Ссылка должна быть валидным URL' };
+          watchState.aggregator.processFeedback = { failure: 'Ссылка должна быть валидным URL' };
           return;
         }
-        if (watchState.form.feedsURLs.includes(url)) {
-          watchState.form.processFeedback = { failure: 'RSS уже существует' };
+        if (watchState.aggregator.feedsURLs.includes(url)) {
+          watchState.aggregator.processFeedback = { failure: 'RSS уже существует' };
           return;
         }
-        watchState.form.feedsURLs.push(url);
-        watchState.form.processState = 'loadingFeed';
-        watchState.form.processFeedback = { success: 'RSS успешно загружен' };
+        watchState.aggregator.processState = 'loadingFeed';
+        watchState.aggregator.feedsURLs.push(url);
+        watchState.aggregator.processFeedback = { success: 'RSS успешно загружен' };
       })
-      .then(() => { watchState.form.processState = 'waitingForUrl'; })
+      .then(() => { watchState.aggregator.processState = 'waitingForInput'; })
       .catch((err) => { throw err; });
   });
 };
