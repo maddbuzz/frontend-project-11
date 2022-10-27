@@ -1,15 +1,10 @@
+import i18next from 'i18next';
+import resources from './locales/index.js';
 import initView from './view.js';
 
-const app = () => {
-  const elements = {
-    formEl: document.querySelector('.rss-form'),
-    inputEl: document.getElementById('url-input'),
-    submitEl: document.querySelector('button[type="submit"]'),
-    feedbackEl: document.querySelector('.feedback'),
-    feedsEl: document.querySelector('.feeds'),
-    feedsListEl: document.querySelector('.feeds ul'),
-  };
+const defaultLanguage = 'ru';
 
+const app = () => {
   // Модель ничего не знает о контроллерах и о представлении. В ней не хранятся DOM-элементы.
   const state = {
     aggregator: {
@@ -19,7 +14,25 @@ const app = () => {
     },
   };
 
-  initView(elements, state);
+  // каждый запуск приложения создаёт свой собственный объект i18n
+  // и работает с ним, не меняя глобальный объект
+  const i18n = i18next.createInstance();
+
+  // await i18n.init({
+  //   lng: defaultLanguage,
+  //   debug: false,
+  //   resources,
+  // });
+  // initView(state, i18n)
+
+  // ...в случае промисов весь код превращается в непрерывную цепочку промисов:
+  i18n.init({
+    lng: defaultLanguage,
+    debug: false,
+    resources,
+  }).then((t) => console.log(t('translationsLoaded')))
+    .then(() => initView(state, i18n))
+    .catch((err) => { throw err; });
 };
 
 export default app;
