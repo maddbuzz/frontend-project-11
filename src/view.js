@@ -4,8 +4,9 @@
 
 import * as yup from 'yup';
 import onChange from 'on-change';
-import _keyBy from 'lodash/keyBy.js';
-import _isEmpty from 'lodash/isEmpty.js';
+// import _keyBy from 'lodash/keyBy.js';
+// import _isEmpty from 'lodash/isEmpty.js';
+import axios from 'axios';
 
 const yupInit = () => {
   yup.setLocale({
@@ -23,31 +24,39 @@ const yupInit = () => {
   return schema;
 };
 
-const yupValidate = (schema, fields) => {
-  const promise = schema.validate(fields, { abortEarly: false })
-    .then(() => ({}))
-    .catch((e) => _keyBy(e.inner, 'path'));
-  return promise;
-};
+// const yupValidate = async (schema, fields) => {
+//   try {
+//     await schema.validate(fields, { abortEarly: false });
+//     return {};
+//   } catch (e) {
+//     return _keyBy(e.inner, 'path');
+//   }
+// };
 
 const switchElementsDisabled = (elements, needDisable) => {
-  Object.values(elements).forEach((el) => {
+  elements.forEach((el) => {
     if (needDisable) el.setAttribute('disabled', '');
     else el.removeAttribute('disabled');
   });
 };
 
-const handleProcessFeedback = (elements, value) => {
+const handleProcessFeedback = (elements, processFeedback) => {
   const {
     posts, feeds, form, input, feedback,
   } = elements;
-  const { success, failure } = value;
+  const { success, failure, neutral } = processFeedback;
 
   if (failure) {
     input.classList.add('is-invalid');
     feedback.classList.remove('text-success');
     feedback.classList.add('text-danger');
     feedback.textContent = failure;
+  }
+  if (neutral) {
+    input.classList.remove('is-invalid');
+    feedback.classList.remove('text-success');
+    feedback.classList.remove('text-danger');
+    feedback.textContent = neutral;
   }
   if (success) {
     input.classList.remove('is-invalid');
@@ -60,25 +69,50 @@ const handleProcessFeedback = (elements, value) => {
   }
 };
 
-const handleProcessState = (elements, value) => {
-  const { input, button } = elements;
+const handleProcessState = (elements, processState) => {
+  const elementsToSwitch = [elements.input, elements.button];
 
-  switch (value) {
+  switch (processState) {
     case 'waitingForInput':
-      switchElementsDisabled({ input, button }, false);
-      input.focus();
-      break;
-
-    case 'validatingInput':
-      switchElementsDisabled({ input, button }, true);
+      switchElementsDisabled(elementsToSwitch, false);
+      elements.input.focus();
       break;
 
     case 'loadingFeed':
+      switchElementsDisabled(elementsToSwitch, true);
       break;
 
     default:
-      throw new Error(`Unknown process state ${value}`);
+      throw Error(`Unknown process state ${processState}`);
   }
+};
+
+const handleFeeds = (elements, feeds) => {
+  const feed = feeds.at(-1);
+  const ul = elements.feeds.querySelector('ul');
+  const li = document.createElement('li');
+  li.classList.add('list-group-item', 'border-0', 'border-end-0');
+  li.innerHTML = `
+    <h3 class="h6 m-0">${feed.title}</h3>
+    <p class="m-0 small text-black-50">${feed.description}</p>
+  `;
+  ul.append(li);
+};
+
+const handlePosts = (elements, posts) => {
+  const { feedId } = posts.at(-1);
+  const ul = elements.posts.querySelector('ul');
+  posts
+    .filter((post) => post.feedId === feedId)
+    .forEach((post) => {
+      const li = document.createElement('li');
+      li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-start', 'border-0', 'border-end-0');
+      li.innerHTML = `
+        <a href="${post.link}" class="fw-bold" data-id="${post.guid}" target="_blank" rel="noopener noreferrer">${post.title}</a>
+        <button type="button" class="btn btn-outline-primary btn-sm" data-id="${post.guid}" data-bs-toggle="modal" data-bs-target="#modal">Просмотр</button>
+      `;
+      ul.append(li);
+    });
 };
 
 // Представление не меняет модель
@@ -94,15 +128,16 @@ const renderView = (elements) => (path, value) => {
       handleProcessFeedback(elements, value);
       break;
 
-    case 'aggregator.feedsURLs': {
-      const li = document.createElement('li');
-      li.textContent = value.at(-1);
-      elements.feeds.querySelector('ul').append(li);
+    case 'aggregator.feeds':
+      handleFeeds(elements, value);
       break;
-    }
+
+    case 'aggregator.posts':
+      handlePosts(elements, value);
+      break;
 
     default:
-      // console.log(path, value);
+      // console.log(path, value, previousValue);
       break;
   }
 };
@@ -117,31 +152,77 @@ const setStaticTexts = (mainElements, i18n) => {
   elements.posts.querySelector('h2').textContent = i18n.t('posts');
 };
 
-const getSubmitCallback = (yupSchema, watchState, i18n) => (e) => {
+const parseXML = (xmlString) => {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlString, 'application/xml');
+  const errorNode = doc.querySelector('parsererror');
+  if (errorNode) {
+    console.error(errorNode);
+    throw Error('xmlParsingError');
+  }
+  return doc;
+};
+
+const tryDownloadContent = (contentUrl) => {
+  const url = `https://allorigins.hexlet.app/get?disableCache=true&url=${contentUrl}`;
+  return axios
+    .get(url)
+    .then((response) => response.data.contents)
+    .catch((err) => {
+      console.error(err);
+      throw Error('contentLoadingError');
+    });
+};
+
+const getSubmitCallback = (yupSchema, watchedState, i18n) => (e) => {
   e.preventDefault();
-  const { aggregator } = watchState;
+  const { aggregator } = watchedState;
   const formData = new FormData(e.target);
   const url = formData.get('url').trim();
-  aggregator.processState = 'validatingInput';
+
+  aggregator.processFeedback = { neutral: i18n.t('feedback.neutral.pleaseWait') };
+  aggregator.processState = 'loadingFeed';
   // Как только в коде появляется асинхронность, код должен менять свою структуру:
   // в случае промисов весь код превращается в непрерывную цепочку промисов.
-  yupValidate(yupSchema, { url })
-    .then((validationErrors) => {
-      if (!_isEmpty(validationErrors)) {
-        const key = validationErrors.url?.message ?? 'unknownValidationError';
-        aggregator.processFeedback = { failure: i18n.t(`feedback.${key}`) };
-        return;
+  yupSchema.validate({ url }, { abortEarly: false })
+    .then(() => {
+      if (aggregator.feeds.find((feed) => feed.url === url)) {
+        throw Error('alreadyExists');
       }
-      if (aggregator.feedsURLs.includes(url)) {
-        aggregator.processFeedback = { failure: i18n.t('feedback.alreadyExists') };
-        return;
-      }
-      aggregator.processState = 'loadingFeed';
-      aggregator.feedsURLs.push(url);
-      aggregator.processFeedback = { success: i18n.t('feedback.loadSuccess') };
     })
-    .then(() => { aggregator.processState = 'waitingForInput'; })
-    .catch((err) => { throw err; });
+    .then(() => tryDownloadContent(url))
+    .then((content) => {
+      const doc = parseXML(content);
+      const feed = {
+        id: aggregator.feeds.length,
+        title: doc.querySelector('channel title').textContent,
+        description: doc.querySelector('channel description').textContent,
+        url,
+      };
+      const items = doc.querySelectorAll('item');
+      const feedPosts = [...items].map((item) => ({
+        feedId: feed.id,
+        guid: item.querySelector('guid').textContent,
+        title: item.querySelector('title').textContent,
+        description: item.querySelector('description').textContent,
+        link: item.querySelector('link').textContent,
+      }));
+      aggregator.feeds.push(feed);
+      aggregator.posts.push(...feedPosts);
+      aggregator.processFeedback = { success: i18n.t('feedback.success.loadSuccess') };
+    })
+    .catch((err) => {
+      const key = `feedback.failure.${err.message}`;
+      let text;
+      if (i18n.exists(key)) {
+        text = i18n.t(key);
+      } else {
+        text = err.message;
+        console.error(err);
+      }
+      aggregator.processFeedback = { failure: text };
+    })
+    .finally(() => { aggregator.processState = 'waitingForInput'; });
 };
 
 const initView = (state, i18n) => {
@@ -162,9 +243,9 @@ const initView = (state, i18n) => {
 
   // Контроллеры не должны менять DOM напрямую, минуя представление.
   // Контроллеры меняют модель, тем самым вызывая рендеринг:
-  const watchState = onChange(state, renderView(mainElements));
+  const watchedState = onChange(state, renderView(mainElements));
 
-  mainElements.form.addEventListener('submit', getSubmitCallback(yupSchema, watchState, i18n));
+  mainElements.form.addEventListener('submit', getSubmitCallback(yupSchema, watchedState, i18n));
 };
 
 export default initView;

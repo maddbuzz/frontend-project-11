@@ -8,9 +8,12 @@ const app = () => {
   // Модель ничего не знает о контроллерах и о представлении. В ней не хранятся DOM-элементы.
   const state = {
     aggregator: {
-      feedsURLs: [],
+      feeds: [],
+      posts: [],
       processState: 'waitingForInput',
-      processFeedback: { success: undefined, failure: undefined },
+      processFeedback: {
+        success: undefined, failure: undefined, neutral: undefined,
+      },
     },
   };
 
@@ -25,14 +28,15 @@ const app = () => {
   // });
   // initView(state, i18n)
 
-  // ...в случае промисов весь код превращается в непрерывную цепочку промисов:
+  // ...в случае промисов весь код превращается в непрерывную цепочку промисов...
   i18n.init({
     lng: defaultLanguage,
     debug: false,
     resources,
-  }).then((t) => console.log(t('translationsLoaded')))
-    .then(() => initView(state, i18n))
-    .catch((err) => { throw err; });
+  }).then((t) => {
+    console.log(t('translationsLoaded'));
+    initView(state, i18n);
+  });
 };
 
 export default app;

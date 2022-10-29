@@ -8,11 +8,19 @@ export default {
       example: 'Пример: https://ru.hexlet.io/lessons.rss',
     },
     feedback: {
-      invalidURL: 'Ссылка должна быть действительным URL',
-      requiredField: 'Вы должны заполнить URL RSS-канала',
-      unknownValidationError: 'Неизвестная ошибка проверки',
-      alreadyExists: 'RSS-канал уже был добавлен',
-      loadSuccess: 'RSS-канал успешно добавлен',
+      failure: {
+        invalidURL: 'Ссылка должна быть действительным URL',
+        requiredField: 'Вы должны заполнить URL RSS-канала',
+        alreadyExists: 'RSS-канал уже был добавлен',
+        contentLoadingError: 'Не удалось загрузить контент',
+        xmlParsingError: 'Не удалось разобрать XML',
+      },
+      success: {
+        loadSuccess: 'RSS-канал успешно добавлен',
+      },
+      neutral: {
+        pleaseWait: 'Пожалуйста, подождите...',
+      },
     },
     feeds: 'Фиды',
     posts: 'Посты',
