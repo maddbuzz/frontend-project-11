@@ -1,3 +1,5 @@
+/* eslint-disable no-param-reassign */
+
 // View (Представление) пользуется Model (Состоянием) для отрисовки
 // (добавление, изменение или удаление элементов DOM),
 // а также добавляет новые Controllers (Обработчики) в DOM.
@@ -127,8 +129,7 @@ const renderView = (elements) => (path, value) => {
   }
 };
 
-const setStaticTexts = (mainElements, i18n) => {
-  const elements = mainElements;
+const setStaticTexts = (elements, i18n) => {
   elements.main.querySelector('h1').textContent = i18n.t('mainHeader');
   elements.form.querySelector('label[for="url-input"]').textContent = i18n.t('form.labelForUrlInput');
   elements.button.textContent = i18n.t('form.button');
@@ -177,20 +178,16 @@ const getFeedAndPosts = (xmlDocument, feedId, feedUrl) => {
   return [feed, feedPosts];
 };
 
-const getSubmitCallback = (yupSchema, watchedState, i18n) => (e) => {
+const getSubmitCallback = (yupSchema, { aggregator }, i18n) => (e) => {
   e.preventDefault();
-  const { aggregator } = watchedState;
-  const formData = new FormData(e.target);
-  const url = formData.get('url').trim();
+  const url = new FormData(e.target).get('url').trim();
 
   aggregator.processFeedback = { neutral: i18n.t('feedback.neutral.pleaseWait') };
   aggregator.processState = 'loadingFeed';
   // Как только в коде появляется асинхронность, код должен менять свою структуру:
   // в случае промисов весь код превращается в непрерывную цепочку промисов:
   yupSchema.validate({ url }, { abortEarly: false })
-    .then(() => {
-      if (aggregator.feeds.find((feed) => feed.url === url)) throw Error('alreadyExists');
-    })
+    .then(() => { if (aggregator.feeds.find((feed) => feed.url === url)) throw Error('alreadyExists'); })
     .then(() => tryDownloadContent(url))
     .then((content) => {
       const xmlDocument = tryParseXML(content);
@@ -202,14 +199,12 @@ const getSubmitCallback = (yupSchema, watchedState, i18n) => (e) => {
     })
     .catch((err) => {
       const key = `feedback.failure.${err.message}`;
-      let text;
       if (i18n.exists(key)) {
-        text = i18n.t(key);
-      } else {
-        text = err.message;
-        console.error(err);
+        aggregator.processFeedback = { failure: i18n.t(key) };
+        return;
       }
-      aggregator.processFeedback = { failure: text };
+      console.error(err);
+      aggregator.processFeedback = { failure: err.message };
     })
     .finally(() => { aggregator.processState = 'waitingForInput'; });
 };
