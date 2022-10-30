@@ -20,15 +20,12 @@ const app = () => {
   // каждый запуск приложения создаёт свой собственный объект i18n
   // и работает с ним, не меняя глобальный объект
   const i18n = i18next.createInstance();
-
   // await i18n.init({
   //   lng: defaultLanguage,
   //   debug: false,
   //   resources,
   // });
   // initView(state, i18n)
-
-  // ...в случае промисов весь код превращается в непрерывную цепочку промисов...
   i18n.init({
     lng: defaultLanguage,
     debug: false,
