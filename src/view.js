@@ -33,12 +33,8 @@ const yupInit = () => {
 //   }
 // };
 
-const switchElementsDisabled = (elements, needDisable) => {
-  elements.forEach((el) => {
-    if (needDisable) el.setAttribute('disabled', '');
-    else el.removeAttribute('disabled');
-  });
-};
+const switchElementsDisabled = (elements, needDisable) => elements
+  .forEach((el) => el.toggleAttribute('disabled', needDisable));
 
 const handleProcessFeedback = (elements, processFeedback) => {
   const {
@@ -46,23 +42,12 @@ const handleProcessFeedback = (elements, processFeedback) => {
   } = elements;
   const { success, failure, neutral } = processFeedback;
 
-  if (failure) {
-    input.classList.add('is-invalid');
-    feedback.classList.remove('text-success');
-    feedback.classList.add('text-danger');
-    feedback.textContent = failure;
-  }
-  if (neutral) {
-    input.classList.remove('is-invalid');
-    feedback.classList.remove('text-success');
-    feedback.classList.remove('text-danger');
-    feedback.textContent = neutral;
-  }
+  input.classList.toggle('is-invalid', Boolean(failure));
+  feedback.classList.toggle('text-danger', Boolean(failure));
+  feedback.classList.toggle('text-success', Boolean(success));
+  feedback.textContent = failure || neutral || success;
+
   if (success) {
-    input.classList.remove('is-invalid');
-    feedback.classList.remove('text-danger');
-    feedback.classList.add('text-success');
-    feedback.textContent = success;
     form.reset();
     feeds.removeAttribute('hidden');
     posts.removeAttribute('hidden');
@@ -152,17 +137,6 @@ const setStaticTexts = (mainElements, i18n) => {
   elements.posts.querySelector('h2').textContent = i18n.t('posts');
 };
 
-const parseXML = (xmlString) => {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(xmlString, 'application/xml');
-  const errorNode = doc.querySelector('parsererror');
-  if (errorNode) {
-    console.error(errorNode);
-    throw Error('xmlParsingError');
-  }
-  return doc;
-};
-
 const tryDownloadContent = (contentUrl) => {
   const url = `https://allorigins.hexlet.app/get?disableCache=true&url=${contentUrl}`;
   return axios
@@ -174,6 +148,35 @@ const tryDownloadContent = (contentUrl) => {
     });
 };
 
+const tryParseXML = (xmlString) => {
+  const parser = new DOMParser();
+  const xmlDocument = parser.parseFromString(xmlString, 'application/xml');
+  const errorNode = xmlDocument.querySelector('parsererror');
+  if (errorNode) {
+    console.error(errorNode);
+    throw Error('xmlParsingError');
+  }
+  return xmlDocument;
+};
+
+const getFeedAndPosts = (xmlDocument, feedId, feedUrl) => {
+  const feed = {
+    id: feedId,
+    title: xmlDocument.querySelector('channel title').textContent,
+    description: xmlDocument.querySelector('channel description').textContent,
+    url: feedUrl,
+  };
+  const items = xmlDocument.querySelectorAll('item');
+  const feedPosts = [...items].map((item) => ({
+    feedId,
+    guid: item.querySelector('guid').textContent,
+    title: item.querySelector('title').textContent,
+    description: item.querySelector('description').textContent,
+    link: item.querySelector('link').textContent,
+  }));
+  return [feed, feedPosts];
+};
+
 const getSubmitCallback = (yupSchema, watchedState, i18n) => (e) => {
   e.preventDefault();
   const { aggregator } = watchedState;
@@ -183,30 +186,16 @@ const getSubmitCallback = (yupSchema, watchedState, i18n) => (e) => {
   aggregator.processFeedback = { neutral: i18n.t('feedback.neutral.pleaseWait') };
   aggregator.processState = 'loadingFeed';
   // Как только в коде появляется асинхронность, код должен менять свою структуру:
-  // в случае промисов весь код превращается в непрерывную цепочку промисов.
+  // в случае промисов весь код превращается в непрерывную цепочку промисов:
   yupSchema.validate({ url }, { abortEarly: false })
     .then(() => {
-      if (aggregator.feeds.find((feed) => feed.url === url)) {
-        throw Error('alreadyExists');
-      }
+      if (aggregator.feeds.find((feed) => feed.url === url)) throw Error('alreadyExists');
     })
     .then(() => tryDownloadContent(url))
     .then((content) => {
-      const doc = parseXML(content);
-      const feed = {
-        id: aggregator.feeds.length,
-        title: doc.querySelector('channel title').textContent,
-        description: doc.querySelector('channel description').textContent,
-        url,
-      };
-      const items = doc.querySelectorAll('item');
-      const feedPosts = [...items].map((item) => ({
-        feedId: feed.id,
-        guid: item.querySelector('guid').textContent,
-        title: item.querySelector('title').textContent,
-        description: item.querySelector('description').textContent,
-        link: item.querySelector('link').textContent,
-      }));
+      const xmlDocument = tryParseXML(content);
+      const feedId = aggregator.feeds.length;
+      const [feed, feedPosts] = getFeedAndPosts(xmlDocument, feedId, url);
       aggregator.feeds.push(feed);
       aggregator.posts.push(...feedPosts);
       aggregator.processFeedback = { success: i18n.t('feedback.success.loadSuccess') };
