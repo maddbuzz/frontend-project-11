@@ -101,7 +101,7 @@ const setUpdateTimer = (updateTimeMs, url, watchedState) => {
   }, updateTimeMs);
 };
 
-const getSubmitCallback = (watchedState, i18n) => (e) => {
+export const getFormSubmitCallback = (watchedState, i18n) => (e) => {
   e.preventDefault();
   const url = new FormData(e.target).get('url').trim();
   const { form } = watchedState.uiState;
@@ -129,4 +129,21 @@ const getSubmitCallback = (watchedState, i18n) => (e) => {
     .finally(() => { form.state = 'waitingForInput'; });
 };
 
-export default getSubmitCallback;
+export const getPostsClickCallback = (watchedState) => (e) => {
+  const { target } = e;
+  if (target.tagName !== 'A' && target.tagName !== 'BUTTON') return;
+
+  const postId = Number(target.getAttribute('data-id'));
+  const { clickedPostsIds } = watchedState.uiState;
+  if (!clickedPostsIds.find((id) => id === postId)) clickedPostsIds.push(postId);
+};
+
+export const getModalShowCallback = (watchedState) => (e) => {
+  // Button that triggered the modal
+  const button = e.relatedTarget;
+
+  const postId = Number(button.getAttribute('data-id'));
+  const post = watchedState.posts.find((p) => p.id === postId);
+  const { title, description, link } = post;
+  watchedState.uiState.dataForModal = { title, description, link };
+};

@@ -5,7 +5,7 @@
 // а также добавляет новые Controllers (Обработчики) в DOM.
 
 import onChange from 'on-change';
-import getSubmitCallback from './controllers.js';
+import { getFormSubmitCallback, getPostsClickCallback, getModalShowCallback } from './controllers.js';
 
 const switchElementsDisabled = (elements, needDisable) => elements
   .forEach((el) => el.toggleAttribute('disabled', needDisable));
@@ -74,6 +74,27 @@ const handlePosts = (elements, posts, previousPosts) => {
     });
 };
 
+const handleClickedPostsIds = (elements, value, previousValue) => {
+  const startIndex = previousValue.length;
+  const ul = elements.posts.querySelector('ul');
+  value
+    .filter((id, index) => index >= startIndex)
+    .forEach((id) => {
+      const a = ul.querySelector(`a[data-id="${id}"]`);
+      a.classList.remove('fw-bold');
+      a.classList.add('fw-normal', 'link-secondary');
+    });
+};
+
+const handleDataForModal = ({ modal }, data) => {
+  const modalTitle = modal.querySelector('.modal-title');
+  const modalBody = modal.querySelector('.modal-body');
+  const modalFooter = modal.querySelector('.modal-footer');
+  modalTitle.textContent = `${data.title}`;
+  modalBody.textContent = `${data.description}`;
+  modalFooter.querySelector('a').setAttribute('href', `${data.link}`);
+};
+
 // Представление не меняет модель
 // В представлении происходит отображение модели на страницу
 // Для оптимизации рендер происходит точечно в зависимости от того, какая часть модели изменилась
@@ -95,6 +116,14 @@ const renderView = (elements) => (path, value, previousValue) => {
       handlePosts(elements, value, previousValue);
       break;
 
+    case 'uiState.clickedPostsIds':
+      handleClickedPostsIds(elements, value, previousValue);
+      break;
+
+    case 'uiState.dataForModal':
+      handleDataForModal(elements, value);
+      break;
+
     default:
       // throw Error(`Unexpected renderView path ${path}`);
       // console.log(path, value, previousValue);
@@ -113,7 +142,7 @@ const setStaticTexts = (elements, i18n) => {
 
 const initView = (state, i18n) => {
   const main = document.querySelector('main');
-  const mainElements = {
+  const elements = {
     main,
     form: main.querySelector('.rss-form'),
     input: main.querySelector('#url-input'),
@@ -121,8 +150,9 @@ const initView = (state, i18n) => {
     feedback: main.querySelector('.feedback'),
     feeds: main.querySelector('.feeds'),
     posts: main.querySelector('.posts'),
+    modal: document.getElementById('modal'),
   };
-  setStaticTexts(mainElements, i18n);
+  setStaticTexts(elements, i18n);
 
   state.uiState = {
     form: {
@@ -131,11 +161,15 @@ const initView = (state, i18n) => {
         neutral: '', success: undefined, failure: undefined,
       },
     },
+    clickedPostsIds: [],
+    dataForModal: {},
   };
   // Контроллеры не должны менять DOM напрямую, минуя представление.
   // Контроллеры меняют модель, тем самым вызывая рендеринг:
-  const watchedState = onChange(state, renderView(mainElements));
-  mainElements.form.addEventListener('submit', getSubmitCallback(watchedState, i18n));
+  const watchedState = onChange(state, renderView(elements));
+  elements.form.addEventListener('submit', getFormSubmitCallback(watchedState, i18n));
+  elements.posts.addEventListener('click', getPostsClickCallback(watchedState));
+  elements.modal.addEventListener('show.bs.modal', getModalShowCallback(watchedState));
 };
 
 export default initView;
