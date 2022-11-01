@@ -58,7 +58,7 @@ const handleFeeds = (elements, feeds) => {
   ul.prepend(li);
 };
 
-const handlePosts = (elements, posts, previousPosts) => {
+const handlePosts = (elements, posts, previousPosts, i18n) => {
   const startIndex = previousPosts.length;
   const ul = elements.posts.querySelector('ul');
   posts
@@ -68,7 +68,7 @@ const handlePosts = (elements, posts, previousPosts) => {
       li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-start', 'border-0', 'border-end-0');
       li.innerHTML = `
         <a href="${post.link}" class="fw-bold" data-id="${post.id}" target="_blank" rel="noopener noreferrer">${post.title}</a>
-        <button type="button" class="btn btn-outline-primary btn-sm" data-id="${post.id}" data-bs-toggle="modal" data-bs-target="#modal">Просмотр</button>
+        <button type="button" class="btn btn-outline-primary btn-sm" data-id="${post.id}" data-bs-toggle="modal" data-bs-target="#modal">${i18n.t('modal.buttons.view')}</button>
       `;
       ul.prepend(li);
     });
@@ -98,7 +98,7 @@ const handleDataForModal = ({ modal }, data) => {
 // Представление не меняет модель
 // В представлении происходит отображение модели на страницу
 // Для оптимизации рендер происходит точечно в зависимости от того, какая часть модели изменилась
-const renderView = (elements) => (path, value, previousValue) => {
+const getRenderView = (elements, i18n) => (path, value, previousValue) => {
   switch (path) {
     case 'uiState.form.state':
       handleFormState(elements, value);
@@ -113,7 +113,7 @@ const renderView = (elements) => (path, value, previousValue) => {
       break;
 
     case 'posts':
-      handlePosts(elements, value, previousValue);
+      handlePosts(elements, value, previousValue, i18n);
       break;
 
     case 'uiState.clickedPostsIds':
@@ -138,6 +138,8 @@ const setStaticTexts = (elements, i18n) => {
   elements.main.querySelector('#url-example').textContent = i18n.t('form.example');
   elements.feeds.querySelector('h2').textContent = i18n.t('feeds');
   elements.posts.querySelector('h2').textContent = i18n.t('posts');
+  elements.modal.querySelector('.modal-footer a').textContent = i18n.t('modal.buttons.readMore');
+  elements.modal.querySelector('.modal-footer button').textContent = i18n.t('modal.buttons.close');
 };
 
 const initView = (state, i18n) => {
@@ -157,16 +159,14 @@ const initView = (state, i18n) => {
   state.uiState = {
     form: {
       state: 'waitingForInput',
-      feedback: {
-        neutral: '', success: undefined, failure: undefined,
-      },
+      feedback: { neutral: '', success: undefined, failure: undefined },
     },
     clickedPostsIds: [],
     dataForModal: {},
   };
   // Контроллеры не должны менять DOM напрямую, минуя представление.
   // Контроллеры меняют модель, тем самым вызывая рендеринг:
-  const watchedState = onChange(state, renderView(elements));
+  const watchedState = onChange(state, getRenderView(elements, i18n));
   elements.form.addEventListener('submit', getFormSubmitCallback(watchedState, i18n));
   elements.posts.addEventListener('click', getPostsClickCallback(watchedState));
   elements.modal.addEventListener('show.bs.modal', getModalShowCallback(watchedState));

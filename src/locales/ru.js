@@ -9,14 +9,14 @@ export default {
     },
     feedback: {
       failure: {
-        invalidURL: 'Ссылка должна быть действительным URL',
-        requiredField: 'Вы должны заполнить URL RSS-канала',
-        alreadyExists: 'RSS-канал уже был добавлен',
-        contentLoadingError: 'Не удалось загрузить контент',
-        xmlParsingError: 'Не удалось разобрать XML',
+        invalidURL: 'Ссылка должна быть валидным URL',
+        requiredField: 'Не должно быть пустым',
+        alreadyExists: 'RSS уже существует',
+        contentLoadingError: 'Ошибка сети',
+        xmlParsingError: 'Ресурс не содержит валидный RSS',
       },
       success: {
-        loadSuccess: 'RSS-канал успешно добавлен',
+        loadSuccess: 'RSS успешно загружен',
       },
       neutral: {
         pleaseWait: 'Пожалуйста, подождите...',
@@ -24,5 +24,10 @@ export default {
     },
     feeds: 'Фиды',
     posts: 'Посты',
+    modal: {
+      buttons: {
+        readMore: 'Читать полностью', view: 'Просмотр', close: 'Закрыть',
+      },
+    },
   },
 };

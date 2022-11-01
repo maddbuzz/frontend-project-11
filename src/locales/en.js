@@ -24,5 +24,10 @@ export default {
     },
     feeds: 'Feeds',
     posts: 'Posts',
+    modal: {
+      buttons: {
+        readMore: 'Read more', view: 'View', close: 'Close',
+      },
+    },
   },
 };
