@@ -7,14 +7,8 @@ const defaultLanguage = 'ru';
 const app = () => {
   // Модель ничего не знает о контроллерах и о представлении. В ней не хранятся DOM-элементы.
   const state = {
-    aggregator: {
-      feeds: [],
-      posts: [],
-      processState: 'waitingForInput',
-      processFeedback: {
-        success: undefined, failure: undefined, neutral: undefined,
-      },
-    },
+    feeds: [],
+    posts: [],
   };
 
   // каждый запуск приложения создаёт свой собственный объект i18n

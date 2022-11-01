@@ -56,7 +56,7 @@ const getFeedPosts = (xmlDocument, feedId) => {
   const items = xmlDocument.querySelectorAll('item');
   return [...items].map((item) => ({
     feedId,
-    guid: item.querySelector('guid').textContent,
+    // guid: item.querySelector('guid').textContent,
     title: item.querySelector('title').textContent,
     description: item.querySelector('description').textContent,
     link: item.querySelector('link').textContent,
@@ -66,62 +66,67 @@ const getFeedPosts = (xmlDocument, feedId) => {
 
 const findFeedWithUrl = (feeds, url) => feeds.find((feed) => feed.url === url);
 
-const tryDownloadThenProcess = (url, aggregator, isNewFeed = true) => tryDownloadContent(url)
+const tryDownloadAndExtractData = (url, watchedState, isNewFeed = true) => tryDownloadContent(url)
   .then((content) => {
     const xmlDocument = tryParseXML(content);
+    const postIdOffset = watchedState.posts.length;
+
     if (isNewFeed) {
-      const feedId = aggregator.feeds.length;
-      const feed = getFeed(xmlDocument, feedId, url);
-      const feedPosts = getFeedPosts(xmlDocument, feedId);
-      aggregator.feeds.push(feed);
-      aggregator.posts.push(...feedPosts);
+      const newFeedId = watchedState.feeds.length;
+      const feed = getFeed(xmlDocument, newFeedId, url);
+      const feedPosts = getFeedPosts(xmlDocument, newFeedId)
+        .map((post, index) => ({ ...post, id: postIdOffset + index }));
+      watchedState.feeds.push(feed);
+      watchedState.posts.push(...feedPosts);
     } else {
-      const feed = findFeedWithUrl(aggregator.feeds, url);
+      const feed = findFeedWithUrl(watchedState.feeds, url);
+      const prevUpdateTime = feed.updateTime;
+      feed.updateTime = Date.now();
       const feedPosts = getFeedPosts(xmlDocument, feed.id);
       const newFeedPosts = feedPosts
         .filter((post) => {
           const postTime = Date.parse(post.pubDate);
-          return postTime > feed.updateTime;
-        });
+          return postTime > prevUpdateTime;
+        })
+        .map((post, index) => ({ ...post, id: postIdOffset + index }));
       // console.log((Date.now() - feed.updateTime) / 1000, newFeedPosts.length);
-      feed.updateTime = Date.now();
-      aggregator.posts.push(...newFeedPosts);
+      watchedState.posts.push(...newFeedPosts);
     }
   });
 
-const setUpdateTimer = (updateTimeMs, url, aggregator) => {
+const setUpdateTimer = (updateTimeMs, url, watchedState) => {
   setTimeout(() => {
-    tryDownloadThenProcess(url, aggregator, false)
-      .finally(() => setUpdateTimer(updateTimeMs, url, aggregator));
+    tryDownloadAndExtractData(url, watchedState, false)
+      .finally(() => setUpdateTimer(updateTimeMs, url, watchedState));
   }, updateTimeMs);
 };
 
 const getSubmitCallback = (watchedState, i18n) => (e) => {
   e.preventDefault();
   const url = new FormData(e.target).get('url').trim();
-  const { aggregator } = watchedState;
+  const { form } = watchedState.uiState;
 
-  aggregator.processState = 'loadingFeed';
-  aggregator.processFeedback = { neutral: i18n.t('feedback.neutral.pleaseWait') };
+  form.state = 'processingInput';
+  form.feedback = { neutral: i18n.t('feedback.neutral.pleaseWait') };
   // Как только в коде появляется асинхронность, код должен менять свою структуру:
   // в случае промисов весь код превращается в непрерывную цепочку промисов:
   yupSchema.validate({ url }, { abortEarly: false })
-    .then(() => { if (findFeedWithUrl(aggregator.feeds, url)) throw Error('alreadyExists'); })
-    .then(() => tryDownloadThenProcess(url, aggregator, true))
+    .then(() => { if (findFeedWithUrl(watchedState.feeds, url)) throw Error('alreadyExists'); })
+    .then(() => tryDownloadAndExtractData(url, watchedState, true))
     .then(() => {
-      aggregator.processFeedback = { success: i18n.t('feedback.success.loadSuccess') };
-      setUpdateTimer(postsUpdateTimeMs, url, aggregator);
+      form.feedback = { success: i18n.t('feedback.success.loadSuccess') };
+      setUpdateTimer(postsUpdateTimeMs, url, watchedState);
     })
     .catch((err) => {
       const key = `feedback.failure.${err.message}`;
       if (i18n.exists(key)) {
-        aggregator.processFeedback = { failure: i18n.t(key) };
+        form.feedback = { failure: i18n.t(key) };
         return;
       }
       console.error(err);
-      aggregator.processFeedback = { failure: err.message };
+      form.feedback = { failure: err.message };
     })
-    .finally(() => { aggregator.processState = 'waitingForInput'; });
+    .finally(() => { form.state = 'waitingForInput'; });
 };
 
 export default getSubmitCallback;

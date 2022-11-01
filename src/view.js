@@ -10,11 +10,11 @@ import getSubmitCallback from './controllers.js';
 const switchElementsDisabled = (elements, needDisable) => elements
   .forEach((el) => el.toggleAttribute('disabled', needDisable));
 
-const handleProcessFeedback = (elements, processFeedback) => {
+const handleFormFeedback = (elements, formFeedback) => {
+  const { success, failure, neutral } = formFeedback;
   const {
     posts, feeds, form, input, feedback,
   } = elements;
-  const { success, failure, neutral } = processFeedback;
 
   input.classList.toggle('is-invalid', Boolean(failure));
   feedback.classList.toggle('text-danger', Boolean(failure));
@@ -28,21 +28,21 @@ const handleProcessFeedback = (elements, processFeedback) => {
   }
 };
 
-const handleProcessState = (elements, processState) => {
+const handleFormState = (elements, formState) => {
   const elementsToSwitch = [elements.input, elements.button];
 
-  switch (processState) {
+  switch (formState) {
     case 'waitingForInput':
       switchElementsDisabled(elementsToSwitch, false);
       elements.input.focus();
       break;
 
-    case 'loadingFeed':
+    case 'processingInput':
       switchElementsDisabled(elementsToSwitch, true);
       break;
 
     default:
-      throw Error(`Unknown process state ${processState}`);
+      throw Error(`Unknown form state ${formState}`);
   }
 };
 
@@ -67,8 +67,8 @@ const handlePosts = (elements, posts, previousPosts) => {
       const li = document.createElement('li');
       li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-start', 'border-0', 'border-end-0');
       li.innerHTML = `
-        <a href="${post.link}" class="fw-bold" data-id="${post.guid}" target="_blank" rel="noopener noreferrer">${post.title}</a>
-        <button type="button" class="btn btn-outline-primary btn-sm" data-id="${post.guid}" data-bs-toggle="modal" data-bs-target="#modal">Просмотр</button>
+        <a href="${post.link}" class="fw-bold" data-id="${post.id}" target="_blank" rel="noopener noreferrer">${post.title}</a>
+        <button type="button" class="btn btn-outline-primary btn-sm" data-id="${post.id}" data-bs-toggle="modal" data-bs-target="#modal">Просмотр</button>
       `;
       ul.prepend(li);
     });
@@ -79,23 +79,24 @@ const handlePosts = (elements, posts, previousPosts) => {
 // Для оптимизации рендер происходит точечно в зависимости от того, какая часть модели изменилась
 const renderView = (elements) => (path, value, previousValue) => {
   switch (path) {
-    case 'aggregator.processState':
-      handleProcessState(elements, value);
+    case 'uiState.form.state':
+      handleFormState(elements, value);
       break;
 
-    case 'aggregator.processFeedback':
-      handleProcessFeedback(elements, value);
+    case 'uiState.form.feedback':
+      handleFormFeedback(elements, value);
       break;
 
-    case 'aggregator.feeds':
+    case 'feeds':
       handleFeeds(elements, value);
       break;
 
-    case 'aggregator.posts':
+    case 'posts':
       handlePosts(elements, value, previousValue);
       break;
 
     default:
+      // throw Error(`Unexpected renderView path ${path}`);
       // console.log(path, value, previousValue);
       break;
   }
@@ -121,9 +122,16 @@ const initView = (state, i18n) => {
     feeds: main.querySelector('.feeds'),
     posts: main.querySelector('.posts'),
   };
-
   setStaticTexts(mainElements, i18n);
 
+  state.uiState = {
+    form: {
+      state: 'waitingForInput',
+      feedback: {
+        neutral: '', success: undefined, failure: undefined,
+      },
+    },
+  };
   // Контроллеры не должны менять DOM напрямую, минуя представление.
   // Контроллеры меняют модель, тем самым вызывая рендеринг:
   const watchedState = onChange(state, renderView(mainElements));
