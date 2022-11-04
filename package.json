@@ -4,7 +4,9 @@
   "description": "Rss Reader is a service for aggregating RSS feeds",
   "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "develop": "make develop",
+    "build": "make build"
   },
   "repository": {
     "type": "git",
@@ -18,7 +20,10 @@
   },
   "homepage": "https://github.com/maddbuzz/frontend-project-11#readme",
   "devDependencies": {
+    "@babel/core": "^7.19.6",
+    "@babel/preset-env": "^7.19.4",
     "@webpack-cli/generators": "^0.1.9",
+    "babel-loader": "^9.1.0",
     "css-loader": "^6.7.1",
     "eslint": "^8.26.0",
     "eslint-config-airbnb-base": "^15.0.0",
