@@ -70,16 +70,23 @@ const handlePosts = (elements, posts, previousPosts, i18n) => {
     });
 };
 
-const handleClickedPostsIds = (elements, value) => { // , previousValue) => {
-  // const startIndex = previousValue.length;
+// const handleClickedPostsIds = (elements, value, previousValue) => {
+//   const startIndex = previousValue.length;
+//   const ul = elements.posts.querySelector('ul');
+//   value
+//     .filter((id, index) => index >= startIndex)
+//     .forEach((id) => {
+//       const a = ul.querySelector(`a[data-id="${id}"]`);
+//       a.classList.remove('fw-bold');
+//       a.classList.add('fw-normal', 'link-secondary');
+//     });
+// };
+const handleClickedPostsIds = (elements, clickedPostsIds) => {
+  const id = clickedPostsIds.at(-1);
   const ul = elements.posts.querySelector('ul');
-  value
-    // .filter((id, index) => index >= startIndex)
-    .forEach((id) => {
-      const a = ul.querySelector(`a[data-id="${id}"]`);
-      a.classList.remove('fw-bold');
-      a.classList.add('fw-normal', 'link-secondary');
-    });
+  const a = ul.querySelector(`a[data-id="${id}"]`);
+  a.classList.remove('fw-bold');
+  a.classList.add('fw-normal', 'link-secondary');
 };
 
 const handleDataForModal = ({ modal }, data) => {
@@ -110,7 +117,7 @@ export const getRenderView = (elements, i18n) => (path, value, previousValue) =>
       break;
 
     case 'uiState.clickedPostsIds':
-      handleClickedPostsIds(elements, value, previousValue);
+      handleClickedPostsIds(elements, value);
       break;
 
     case 'uiState.dataForModal':

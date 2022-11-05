@@ -93,8 +93,8 @@ export const getFormSubmitCallback = (watchedState, i18n) => (e) => {
 export const getPostsClickCallback = (watchedState) => (e) => {
   const { target } = e;
   // if (target.tagName !== 'A' && target.tagName !== 'BUTTON') return;
+  if (!target.hasAttribute('data-id')) return;
   const postId = Number(target.getAttribute('data-id'));
-  if (!postId) return;
   const { clickedPostsIds } = watchedState.uiState;
   if (!clickedPostsIds.find((id) => id === postId)) clickedPostsIds.push(postId);
 };
