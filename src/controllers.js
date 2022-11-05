@@ -30,29 +30,33 @@ const tryDownloadContent = (contentUrl) => {
 
 const findFeedWithUrl = (feeds, url) => feeds.find((feed) => feed.url === url);
 
-const tryDownloadAndExtractData = (url, watchedState, isNewFeed = true) => tryDownloadContent(url)
+const addNewFeedAndPosts = (url, watchedState, feedData, postsData, postIdOffset) => {
+  const newFeedId = watchedState.feeds.length;
+  const feed = {
+    ...feedData, id: newFeedId, url, updateTime: Date.now(),
+  };
+  const feedPosts = postsData
+    .map((post, index) => ({ ...post, feedId: newFeedId, id: postIdOffset + index }));
+  watchedState.feeds.push(feed);
+  watchedState.posts.push(...feedPosts);
+};
+
+const updateFeedPosts = (url, watchedState, postsData, postIdOffset) => {
+  const feed = findFeedWithUrl(watchedState.feeds, url);
+  const prevUpdateTime = feed.updateTime;
+  feed.updateTime = Date.now();
+  const newFeedPosts = postsData
+    .filter((post) => Date.parse(post.pubDate) > prevUpdateTime)
+    .map((post, index) => ({ ...post, feedId: feed.id, id: postIdOffset + index }));
+  if (newFeedPosts.length) watchedState.posts.push(...newFeedPosts);
+};
+
+const tryDownloadAndExtractData = (url, watchedState, isNewFeed) => tryDownloadContent(url)
   .then((content) => {
     const [feedData, postsData] = parseAndExtractData(content);
-
     const postIdOffset = watchedState.posts.length;
-    if (isNewFeed) {
-      const newFeedId = watchedState.feeds.length;
-      const feed = {
-        ...feedData, id: newFeedId, url, updateTime: Date.now(),
-      };
-      const feedPosts = postsData
-        .map((post, index) => ({ ...post, feedId: newFeedId, id: postIdOffset + index }));
-      watchedState.feeds.push(feed);
-      watchedState.posts.push(...feedPosts);
-    } else {
-      const feed = findFeedWithUrl(watchedState.feeds, url);
-      const prevUpdateTime = feed.updateTime;
-      feed.updateTime = Date.now();
-      const newFeedPosts = postsData
-        .filter((post) => Date.parse(post.pubDate) > prevUpdateTime)
-        .map((post, index) => ({ ...post, feedId: feed.id, id: postIdOffset + index }));
-      if (newFeedPosts.length) watchedState.posts.push(...newFeedPosts);
-    }
+    if (isNewFeed) addNewFeedAndPosts(url, watchedState, feedData, postsData, postIdOffset);
+    else updateFeedPosts(url, watchedState, postsData, postIdOffset);
   });
 
 const setUpdateTimer = (updateTimeMs, url, watchedState) => {
