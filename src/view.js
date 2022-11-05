@@ -70,11 +70,11 @@ const handlePosts = (elements, posts, previousPosts, i18n) => {
     });
 };
 
-const handleClickedPostsIds = (elements, value, previousValue) => {
-  const startIndex = previousValue.length;
+const handleClickedPostsIds = (elements, value) => { // , previousValue) => {
+  // const startIndex = previousValue.length;
   const ul = elements.posts.querySelector('ul');
   value
-    .filter((id, index) => index >= startIndex)
+    // .filter((id, index) => index >= startIndex)
     .forEach((id) => {
       const a = ul.querySelector(`a[data-id="${id}"]`);
       a.classList.remove('fw-bold');
