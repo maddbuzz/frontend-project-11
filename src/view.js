@@ -1,11 +1,6 @@
 /* eslint-disable no-param-reassign */
 
-// View (Представление) пользуется Model (Состоянием) для отрисовки
-// (добавление, изменение или удаление элементов DOM),
-// а также добавляет новые Controllers (Обработчики) в DOM.
-
-import onChange from 'on-change';
-import { getFormSubmitCallback, getPostsClickCallback, getModalShowCallback } from './controllers.js';
+// import _isEqual from 'lodash/isEqual.js';
 
 const switchElementsDisabled = (elements, needDisable) => elements
   .forEach((el) => el.toggleAttribute('disabled', needDisable));
@@ -60,6 +55,7 @@ const handleFeeds = (elements, feeds) => {
 
 const handlePosts = (elements, posts, previousPosts, i18n) => {
   const startIndex = previousPosts.length;
+  // console.log('handlePosts', posts.length, startIndex);
   const ul = elements.posts.querySelector('ul');
   posts
     .filter((post, index) => index >= startIndex)
@@ -74,16 +70,12 @@ const handlePosts = (elements, posts, previousPosts, i18n) => {
     });
 };
 
-const handleClickedPostsIds = (elements, value, previousValue) => {
-  const startIndex = previousValue.length;
+const handleClickedPostsIds = (elements, clickedPostsIds) => {
+  const id = clickedPostsIds.at(-1);
   const ul = elements.posts.querySelector('ul');
-  value
-    .filter((id, index) => index >= startIndex)
-    .forEach((id) => {
-      const a = ul.querySelector(`a[data-id="${id}"]`);
-      a.classList.remove('fw-bold');
-      a.classList.add('fw-normal', 'link-secondary');
-    });
+  const a = ul.querySelector(`a[data-id="${id}"]`);
+  a.classList.remove('fw-bold');
+  a.classList.add('fw-normal', 'link-secondary');
 };
 
 const handleDataForModal = ({ modal }, data) => {
@@ -95,10 +87,7 @@ const handleDataForModal = ({ modal }, data) => {
   modalFooter.querySelector('a').setAttribute('href', `${data.link}`);
 };
 
-// Представление не меняет модель
-// В представлении происходит отображение модели на страницу
-// Для оптимизации рендер происходит точечно в зависимости от того, какая часть модели изменилась
-const getRenderView = (elements, i18n) => (path, value, previousValue) => {
+export const getRenderView = (elements, i18n) => (path, value, previousValue) => {
   switch (path) {
     case 'uiState.form.state':
       handleFormState(elements, value);
@@ -117,7 +106,7 @@ const getRenderView = (elements, i18n) => (path, value, previousValue) => {
       break;
 
     case 'uiState.clickedPostsIds':
-      handleClickedPostsIds(elements, value, previousValue);
+      handleClickedPostsIds(elements, value);
       break;
 
     case 'uiState.dataForModal':
@@ -125,13 +114,12 @@ const getRenderView = (elements, i18n) => (path, value, previousValue) => {
       break;
 
     default:
-      // throw Error(`Unexpected renderView path ${path}`);
-      // console.log(path, value, previousValue);
+      // console.log('Unhandled:', path, _isEqual(value, previousValue), value, previousValue); //
       break;
   }
 };
 
-const setStaticTexts = (elements, i18n) => {
+export const setStaticTexts = (elements, i18n) => {
   elements.main.querySelector('h1').textContent = i18n.t('mainHeader');
   elements.form.querySelector('label[for="url-input"]').textContent = i18n.t('form.labelForUrlInput');
   elements.button.textContent = i18n.t('form.button');
@@ -141,35 +129,3 @@ const setStaticTexts = (elements, i18n) => {
   elements.modal.querySelector('.modal-footer a').textContent = i18n.t('modal.buttons.readMore');
   elements.modal.querySelector('.modal-footer button').textContent = i18n.t('modal.buttons.close');
 };
-
-const initView = (state, i18n) => {
-  const main = document.querySelector('main');
-  const elements = {
-    main,
-    form: main.querySelector('.rss-form'),
-    input: main.querySelector('#url-input'),
-    button: main.querySelector('.rss-form button'),
-    feedback: main.querySelector('.feedback'),
-    feeds: main.querySelector('.feeds'),
-    posts: main.querySelector('.posts'),
-    modal: document.getElementById('modal'),
-  };
-  setStaticTexts(elements, i18n);
-
-  state.uiState = {
-    form: {
-      state: 'waitingForInput',
-      feedback: { neutral: '', success: undefined, failure: undefined },
-    },
-    clickedPostsIds: [],
-    dataForModal: {},
-  };
-  // Контроллеры не должны менять DOM напрямую, минуя представление.
-  // Контроллеры меняют модель, тем самым вызывая рендеринг:
-  const watchedState = onChange(state, getRenderView(elements, i18n));
-  elements.form.addEventListener('submit', getFormSubmitCallback(watchedState, i18n));
-  elements.posts.addEventListener('click', getPostsClickCallback(watchedState));
-  elements.modal.addEventListener('show.bs.modal', getModalShowCallback(watchedState));
-};
-
-export default initView;
