@@ -70,12 +70,16 @@ const handlePosts = (elements, posts, previousPosts, i18n) => {
     });
 };
 
-const handleClickedPostsIds = (elements, clickedPostsIds) => {
-  const id = clickedPostsIds.at(-1);
+const handleClickedPostsIds = (elements, value, previousValue) => {
+  const startIndex = previousValue.length;
   const ul = elements.posts.querySelector('ul');
-  const a = ul.querySelector(`a[data-id="${id}"]`);
-  a.classList.remove('fw-bold');
-  a.classList.add('fw-normal', 'link-secondary');
+  value
+    .filter((id, index) => index >= startIndex)
+    .forEach((id) => {
+      const a = ul.querySelector(`a[data-id="${id}"]`);
+      a.classList.remove('fw-bold');
+      a.classList.add('fw-normal', 'link-secondary');
+    });
 };
 
 const handleDataForModal = ({ modal }, data) => {
@@ -106,7 +110,7 @@ export const getRenderView = (elements, i18n) => (path, value, previousValue) =>
       break;
 
     case 'uiState.clickedPostsIds':
-      handleClickedPostsIds(elements, value);
+      handleClickedPostsIds(elements, value, previousValue);
       break;
 
     case 'uiState.dataForModal':
