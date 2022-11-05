@@ -100,7 +100,7 @@ export const getPostsClickCallback = (watchedState) => (e) => {
   if (!target.hasAttribute('data-id')) return;
   const postId = Number(target.getAttribute('data-id'));
   const { clickedPostsIds } = watchedState.uiState;
-  if (!clickedPostsIds.find((id) => id === postId)) clickedPostsIds.push(postId);
+  if (!clickedPostsIds.includes(postId)) clickedPostsIds.push(postId);
 };
 
 export const getModalShowCallback = (watchedState) => (e) => {
