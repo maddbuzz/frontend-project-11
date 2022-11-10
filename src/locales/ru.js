@@ -8,19 +8,13 @@ export default {
       example: 'Пример: https://ru.hexlet.io/lessons.rss',
     },
     feedback: {
-      failure: {
-        invalidURL: 'Ссылка должна быть валидным URL',
-        requiredField: 'Не должно быть пустым',
-        alreadyExists: 'RSS уже существует',
-        contentLoadingError: 'Ошибка сети',
-        xmlParsingError: 'Ресурс не содержит валидный RSS',
-      },
-      success: {
-        loadSuccess: 'RSS успешно загружен',
-      },
-      neutral: {
-        pleaseWait: 'Пожалуйста, подождите...',
-      },
+      invalidURL: 'Ссылка должна быть валидным URL',
+      requiredField: 'Не должно быть пустым',
+      alreadyExists: 'RSS уже существует',
+      contentLoadingError: 'Ошибка сети',
+      xmlParsingError: 'Ресурс не содержит валидный RSS',
+      loadSuccess: 'RSS успешно загружен',
+      pleaseWait: 'Пожалуйста, подождите...',
     },
     feeds: 'Фиды',
     posts: 'Посты',

@@ -1,87 +1,86 @@
 /* eslint-disable no-param-reassign */
 
-// import _isEqual from 'lodash/isEqual.js';
-
 const switchElementsDisabled = (elements, needDisable) => elements
   .forEach((el) => el.toggleAttribute('disabled', needDisable));
 
-const handleFormFeedback = (elements, formFeedback) => {
-  const { success, failure, neutral } = formFeedback;
-  const {
-    posts, feeds, form, input, feedback,
-  } = elements;
-
-  input.classList.toggle('is-invalid', Boolean(failure));
-  feedback.classList.toggle('text-danger', Boolean(failure));
-  feedback.classList.toggle('text-success', Boolean(success));
-  feedback.textContent = failure || neutral || success;
-
-  if (success) {
-    form.reset();
-    feeds.removeAttribute('hidden');
-    posts.removeAttribute('hidden');
-  }
+const renderInputValidityAndFeedback = (elements, text, isSucceeded = false, isFailed = false) => {
+  const { input, feedback } = elements;
+  input.classList.toggle('is-invalid', isFailed);
+  feedback.classList.toggle('text-danger', isFailed);
+  feedback.classList.toggle('text-success', isSucceeded);
+  feedback.textContent = text;
 };
 
-const handleFormState = (elements, formState) => {
+const renderForm = (elements, { state, feedbackKey }, i18n) => {
   const elementsToSwitch = [elements.input, elements.button];
+  const feedbackText = i18n.t(`feedback.${feedbackKey}`);
 
-  switch (formState) {
-    case 'waitingForInput':
+  switch (state) {
+    case 'filling':
       switchElementsDisabled(elementsToSwitch, false);
       elements.input.focus();
       break;
 
-    case 'processingInput':
+    case 'processing':
       switchElementsDisabled(elementsToSwitch, true);
+      renderInputValidityAndFeedback(elements, feedbackText, false, false);
+      break;
+
+    case 'failed':
+      renderInputValidityAndFeedback(elements, feedbackText, false, true);
+      break;
+
+    case 'succeeded':
+      renderInputValidityAndFeedback(elements, feedbackText, true, false);
+      elements.form.reset();
       break;
 
     default:
-      throw Error(`Unknown form state ${formState}`);
+      throw Error(`Unknown form state ${state}`);
   }
 };
 
-const handleFeeds = (elements, feeds) => {
+const renderFeeds = (elements, feeds) => {
+  elements.feeds.removeAttribute('hidden');
   const feed = feeds.at(-1);
   const ul = elements.feeds.querySelector('ul');
   const li = document.createElement('li');
-  li.classList.add('list-group-item', 'border-0', 'border-end-0');
-  li.innerHTML = `
-    <h3 class="h6 m-0">${feed.title}</h3>
-    <p class="m-0 small text-black-50">${feed.description}</p>
-  `;
+  li.className = 'list-group-item border-0 border-end-0';
+  const h3 = document.createElement('h3');
+  h3.className = 'h6 m-0';
+  h3.textContent = feed.title;
+  const p = document.createElement('p');
+  p.className = 'm-0 small text-black-50';
+  p.textContent = feed.description;
+  li.append(h3, p);
   ul.prepend(li);
 };
 
-const handlePosts = (elements, posts, previousPosts, i18n) => {
+const renderPosts = (elements, posts, previousPosts, i18n) => {
+  elements.posts.removeAttribute('hidden');
   const startIndex = previousPosts.length;
-  // console.log('handlePosts', posts.length, startIndex);
   const ul = elements.posts.querySelector('ul');
   posts
     .filter((post, index) => index >= startIndex)
     .forEach((post) => {
       const li = document.createElement('li');
-      li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-start', 'border-0', 'border-end-0');
-      li.innerHTML = `
-        <a href="${post.link}" class="fw-bold" data-id="${post.id}" target="_blank" rel="noopener noreferrer">${post.title}</a>
-        <button type="button" class="btn btn-outline-primary btn-sm" data-id="${post.id}" data-bs-toggle="modal" data-bs-target="#modal">${i18n.t('modal.buttons.view')}</button>
-      `;
+      li.className = 'list-group-item d-flex justify-content-between align-items-start border-0 border-end-0';
+      const a = document.createElement('a');
+      a.className = 'fw-bold';
+      a.textContent = post.title;
+      [['target', '_blank'], ['rel', 'noopener noreferrer'], ['href', post.link], ['data-id', String(post.id)]]
+        .forEach(([name, value]) => a.setAttribute(name, value));
+      const button = document.createElement('button');
+      button.className = 'btn btn-outline-primary btn-sm';
+      button.textContent = i18n.t('modal.buttons.view');
+      [['type', 'button'], ['data-bs-toggle', 'modal'], ['data-bs-target', '#modal'], ['data-id', String(post.id)]]
+        .forEach(([name, value]) => button.setAttribute(name, value));
+      li.append(a, button);
       ul.prepend(li);
     });
 };
 
-// const handleClickedPostsIds = (elements, value, previousValue) => {
-//   const startIndex = previousValue.length;
-//   const ul = elements.posts.querySelector('ul');
-//   value
-//     .filter((id, index) => index >= startIndex)
-//     .forEach((id) => {
-//       const a = ul.querySelector(`a[data-id="${id}"]`);
-//       a.classList.remove('fw-bold');
-//       a.classList.add('fw-normal', 'link-secondary');
-//     });
-// };
-const handleClickedPostsIds = (elements, clickedPostsIds) => {
+const renderClickedPostsIds = (elements, clickedPostsIds) => {
   const id = clickedPostsIds.at(-1);
   const ul = elements.posts.querySelector('ul');
   const a = ul.querySelector(`a[data-id="${id}"]`);
@@ -89,44 +88,40 @@ const handleClickedPostsIds = (elements, clickedPostsIds) => {
   a.classList.add('fw-normal', 'link-secondary');
 };
 
-const handleDataForModal = ({ modal }, data) => {
+const renderModalContent = ({ modal }, content) => {
   const modalTitle = modal.querySelector('.modal-title');
   const modalBody = modal.querySelector('.modal-body');
   const modalFooter = modal.querySelector('.modal-footer');
-  modalTitle.textContent = `${data.title}`;
-  modalBody.textContent = `${data.description}`;
-  modalFooter.querySelector('a').setAttribute('href', `${data.link}`);
+  modalTitle.textContent = content.title;
+  modalBody.textContent = content.description;
+  modalFooter.querySelector('a').setAttribute('href', content.link);
 };
 
 export const getRenderView = (elements, i18n) => (path, value, previousValue) => {
   switch (path) {
-    case 'uiState.form.state':
-      handleFormState(elements, value);
-      break;
-
-    case 'uiState.form.feedback':
-      handleFormFeedback(elements, value);
+    case 'uiState.form':
+      renderForm(elements, value, i18n);
       break;
 
     case 'feeds':
-      handleFeeds(elements, value);
+      renderFeeds(elements, value);
       break;
 
     case 'posts':
-      handlePosts(elements, value, previousValue, i18n);
+      renderPosts(elements, value, previousValue, i18n);
       break;
 
     case 'uiState.clickedPostsIds':
-      handleClickedPostsIds(elements, value);
+      renderClickedPostsIds(elements, value);
       break;
 
-    case 'uiState.dataForModal':
-      handleDataForModal(elements, value);
+    case 'uiState.modalContent':
+      renderModalContent(elements, value);
       break;
 
     default:
-      // console.log('Unhandled:', path, _isEqual(value, previousValue), value, previousValue); //
-      break;
+      // console.log('Unhandled:', path, value, previousValue); break;
+      throw Error(`Unhandled watchedState path ${path}`);
   }
 };
 
