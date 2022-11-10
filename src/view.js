@@ -80,7 +80,7 @@ const renderPosts = (elements, posts, previousPosts, i18n) => {
     });
 };
 
-const renderClickedPostsIds = (elements, clickedPostsIds) => {
+const renderClickedPost = (elements, clickedPostsIds) => {
   const id = clickedPostsIds.at(-1);
   const ul = elements.posts.querySelector('ul');
   const a = ul.querySelector(`a[data-id="${id}"]`);
@@ -112,7 +112,7 @@ export const getRenderView = (elements, i18n) => (path, value, previousValue) =>
       break;
 
     case 'uiState.clickedPostsIds':
-      renderClickedPostsIds(elements, value);
+      renderClickedPost(elements, value);
       break;
 
     case 'uiState.modalContent':
