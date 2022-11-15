@@ -15,7 +15,7 @@ const yupSchema = (() => yup.object()
   })
 )();
 
-const tryDownloadContent = (contentUrl) => {
+const downloadContent = (contentUrl) => {
   const url = `https://allorigins.hexlet.app/get?disableCache=true&url=${encodeURIComponent(contentUrl)}`;
   return axios
     .get(url)
@@ -25,7 +25,7 @@ const tryDownloadContent = (contentUrl) => {
     });
 };
 
-const tryAddNewFeedPosts = (url, watchedState) => tryDownloadContent(url)
+const addNewFeedPosts = (url, watchedState) => downloadContent(url)
   .then((content) => {
     const [feedData, postsData] = parseAndExtractData(content);
     const postIdOffset = watchedState.posts.length;
@@ -37,7 +37,7 @@ const tryAddNewFeedPosts = (url, watchedState) => tryDownloadContent(url)
     watchedState.posts.push(...feedPosts);
   });
 
-const tryUpdateFeedPosts = (feed, watchedState) => tryDownloadContent(feed.url)
+const updateFeedPosts = (feed, watchedState) => downloadContent(feed.url)
   .then((content) => {
     const [, postsData] = parseAndExtractData(content);
     const postIdOffset = watchedState.posts.length;
@@ -54,17 +54,26 @@ const tryUpdateFeedPosts = (feed, watchedState) => tryDownloadContent(feed.url)
     if (newFeedPosts.length) watchedState.posts.push(...newFeedPosts);
   });
 
+/*
 export const setUpdateTimer = (watchedState, updateIntervalMs, startTime = Date.now()) => {
   const elapsedTime = Date.now() - startTime;
   const delayMs = updateIntervalMs - (elapsedTime % updateIntervalMs);
   // console.log('setUpdateTimer', elapsedTime / 1000, delayMs / 1000);
-
   setTimeout(() => {
-    const promises = watchedState.feeds.map((feed) => tryUpdateFeedPosts(feed, watchedState));
+    const promises = watchedState.feeds.map((feed) => updateFeedPosts(feed, watchedState));
     Promise.allSettled(promises)
       // .then((results) => results.forEach((result) => console.log(result)))
       .finally(() => { setUpdateTimer(watchedState, updateIntervalMs, startTime); });
   }, delayMs);
+};
+*/
+
+export const setUpdateTimer = (watchedState, updateIntervalMs) => {
+  setTimeout(() => {
+    const promises = watchedState.feeds.map((feed) => updateFeedPosts(feed, watchedState));
+    Promise.allSettled(promises)
+      .finally(() => { setUpdateTimer(watchedState, updateIntervalMs); });
+  }, updateIntervalMs);
 };
 
 export const getFormSubmitCallback = (watchedState, i18n) => (e) => {
@@ -77,7 +86,7 @@ export const getFormSubmitCallback = (watchedState, i18n) => (e) => {
   // в случае промисов весь код превращается в непрерывную цепочку промисов:
   const urls = _map(watchedState.feeds, 'url');
   yupSchema.validate({ url, urls }, { abortEarly: false })
-    .then(() => tryAddNewFeedPosts(url, watchedState))
+    .then(() => addNewFeedPosts(url, watchedState))
     .then(() => { uiState.form = { state: 'succeeded', feedbackKey: 'loadSuccess' }; })
     .catch((err) => {
       if (err.cause) console.error(err.cause);
@@ -92,8 +101,8 @@ export const getPostsClickCallback = (watchedState) => (e) => {
   const { target } = e;
   if (!target.hasAttribute('data-id')) return;
   const postId = Number(target.getAttribute('data-id'));
-  const { clickedPostsIds } = watchedState.uiState;
-  if (!clickedPostsIds.includes(postId)) clickedPostsIds.push(postId);
+  const { viewedPostsIds } = watchedState.uiState;
+  if (!viewedPostsIds.includes(postId)) viewedPostsIds.push(postId);
 };
 
 export const getModalShowCallback = (watchedState) => (e) => {

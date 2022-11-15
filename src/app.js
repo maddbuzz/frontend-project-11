@@ -16,7 +16,7 @@ const app = () => {
     posts: [],
     uiState: {
       form: { state: 'filling', feedbackKey: undefined },
-      clickedPostsIds: [],
+      viewedPostsIds: [],
       modalContent: {},
     },
   };

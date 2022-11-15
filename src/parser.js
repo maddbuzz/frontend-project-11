@@ -1,4 +1,4 @@
-const tryParseXML = (xmlString) => {
+const parseXML = (xmlString) => {
   const parser = new DOMParser();
   const xmlDocument = parser.parseFromString(xmlString, 'application/xml');
   const errorNode = xmlDocument.querySelector('parsererror');
@@ -11,7 +11,7 @@ const tryParseXML = (xmlString) => {
 };
 
 const parseAndExtractData = (content) => {
-  const xmlDocument = tryParseXML(content);
+  const xmlDocument = parseXML(content);
 
   const feedData = {
     title: xmlDocument.querySelector('channel title').textContent,

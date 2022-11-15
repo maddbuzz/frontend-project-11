@@ -80,8 +80,8 @@ const renderPosts = (elements, posts, previousPosts, i18n) => {
     });
 };
 
-const renderClickedPost = (elements, clickedPostsIds) => {
-  const id = clickedPostsIds.at(-1);
+const renderViewedPost = (elements, viewedPostsIds) => {
+  const id = viewedPostsIds.at(-1);
   const ul = elements.posts.querySelector('ul');
   const a = ul.querySelector(`a[data-id="${id}"]`);
   a.classList.remove('fw-bold');
@@ -111,8 +111,8 @@ export const getRenderView = (elements, i18n) => (path, value, previousValue) =>
       renderPosts(elements, value, previousValue, i18n);
       break;
 
-    case 'uiState.clickedPostsIds':
-      renderClickedPost(elements, value);
+    case 'uiState.viewedPostsIds':
+      renderViewedPost(elements, value);
       break;
 
     case 'uiState.modalContent':
