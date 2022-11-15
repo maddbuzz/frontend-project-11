@@ -3,40 +3,62 @@
 const switchElementsDisabled = (elements, needDisable) => elements
   .forEach((el) => el.toggleAttribute('disabled', needDisable));
 
-const renderInputValidityAndFeedback = (elements, text, isSucceeded = false, isFailed = false) => {
-  const { input, feedback } = elements;
-  input.classList.toggle('is-invalid', isFailed);
+const renderInputValidity = ({ input }, isValid = true) => {
+  input.classList.toggle('is-invalid', !isValid);
+};
+
+const renderFeedback = ({ feedback }, text, isSucceeded = false, isFailed = false) => {
   feedback.classList.toggle('text-danger', isFailed);
   feedback.classList.toggle('text-success', isSucceeded);
   feedback.textContent = text;
 };
 
-const renderForm = (elements, { state, feedbackKey }, i18n) => {
+const renderForm = (elements, { state, error }, i18n) => {
   const elementsToSwitch = [elements.input, elements.button];
-  const feedbackText = i18n.t(`feedback.${feedbackKey}`);
-
   switch (state) {
     case 'filling':
       switchElementsDisabled(elementsToSwitch, false);
       elements.input.focus();
       break;
 
-    case 'processing':
+    case 'validating':
       switchElementsDisabled(elementsToSwitch, true);
-      renderInputValidityAndFeedback(elements, feedbackText, false, false);
       break;
 
-    case 'failed':
-      renderInputValidityAndFeedback(elements, feedbackText, false, true);
+    case 'validatingFailed':
+      renderInputValidity(elements, false);
+      renderFeedback(elements, i18n.t(error), false, true);
       break;
 
-    case 'succeeded':
-      renderInputValidityAndFeedback(elements, feedbackText, true, false);
+    case 'validatingSucceeded':
+      renderInputValidity(elements, true);
+      break;
+
+    default:
+      throw Error(`Unknown form state <${state}>`);
+  }
+};
+
+const renderFeedLoading = (elements, { state, error }, i18n) => {
+  switch (state) {
+    case 'idling':
+      break;
+
+    case 'loading':
+      renderFeedback(elements, i18n.t('feedback.pleaseWait'), false, false);
+      break;
+
+    case 'loadingFailed':
+      renderFeedback(elements, i18n.t(error), false, true);
+      break;
+
+    case 'loadingSucceeded':
+      renderFeedback(elements, i18n.t('feedback.loadSuccess'), true, false);
       elements.form.reset();
       break;
 
     default:
-      throw Error(`Unknown form state ${state}`);
+      throw Error(`Unknown feed loading state <${state}>`);
   }
 };
 
@@ -99,8 +121,12 @@ const renderModalContent = ({ modal }, content) => {
 
 export const getRenderView = (elements, i18n) => (path, value, previousValue) => {
   switch (path) {
-    case 'uiState.form':
+    case 'form':
       renderForm(elements, value, i18n);
+      break;
+
+    case 'feedLoading':
+      renderFeedLoading(elements, value, i18n);
       break;
 
     case 'feeds':
@@ -111,17 +137,17 @@ export const getRenderView = (elements, i18n) => (path, value, previousValue) =>
       renderPosts(elements, value, previousValue, i18n);
       break;
 
-    case 'uiState.viewedPostsIds':
+    case 'viewedPostsIds':
       renderViewedPost(elements, value);
       break;
 
-    case 'uiState.modalContent':
+    case 'modalContent':
       renderModalContent(elements, value);
       break;
 
     default:
-      // console.log('Unhandled:', path, value, previousValue); break;
-      throw Error(`Unhandled watchedState path ${path}`);
+      // console.log('Unhandled:', path, previousValue, value); break;
+      throw Error(`Unhandled watchedState path <${path}>`);
   }
 };
 

@@ -14,11 +14,16 @@ const app = () => {
   const state = {
     feeds: [],
     posts: [],
-    uiState: {
-      form: { state: 'filling', feedbackKey: undefined },
-      viewedPostsIds: [],
-      modalContent: {},
+    form: {
+      state: 'filling', // filling, validating, validatingSucceeded, validatingFailed
+      error: null,
     },
+    feedLoading: {
+      state: 'idling', // idling, loading, loadingSucceeded, loadingFailed
+      error: null,
+    },
+    viewedPostsIds: [],
+    modalContent: {},
   };
 
   const main = document.querySelector('main');

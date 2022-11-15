@@ -21,7 +21,9 @@ const downloadContent = (contentUrl) => {
     .get(url)
     .then((response) => response.data.contents)
     .catch((err) => {
-      throw new Error('contentLoadingError', { cause: err });
+      const e = new Error('contentLoadingError', { cause: err });
+      e.name = err.name;
+      throw e;
     });
 };
 
@@ -79,29 +81,43 @@ export const setUpdateTimer = (watchedState, updateIntervalMs) => {
 export const getFormSubmitCallback = (watchedState, i18n) => (e) => {
   e.preventDefault();
   const url = new FormData(e.target).get('url').trim();
-  const { uiState } = watchedState;
-
-  uiState.form = { state: 'processing', feedbackKey: 'pleaseWait' };
-  // Как только в коде появляется асинхронность, код должен менять свою структуру,
-  // в случае промисов весь код превращается в непрерывную цепочку промисов:
   const urls = _map(watchedState.feeds, 'url');
+
+  watchedState.form = { state: 'validating' };
   yupSchema.validate({ url, urls }, { abortEarly: false })
-    .then(() => addNewFeedPosts(url, watchedState))
-    .then(() => { uiState.form = { state: 'succeeded', feedbackKey: 'loadSuccess' }; })
-    .catch((err) => {
-      if (err.cause) console.error(err.cause);
-      const feedbackKey = err.message;
-      if (!i18n.exists(`feedback.${feedbackKey}`)) throw err;
-      uiState.form = { state: 'failed', feedbackKey };
+    .then(() => {
+      watchedState.form = { state: 'validatingSucceeded' };
+      watchedState.feedLoading = { state: 'loading' };
+      return addNewFeedPosts(url, watchedState);
     })
-    .finally(() => { uiState.form = { state: 'filling' }; });
+    .then(() => { watchedState.feedLoading = { state: 'loadingSucceeded' }; })
+    .catch((err) => {
+      const errorKey = `feedback.${err.message}`;
+      if (!i18n.exists(errorKey)) throw err;
+      // if (err.cause) console.error(err.cause);
+      switch (err.name) {
+        case 'ValidationError':
+          watchedState.form = { state: 'validatingFailed', error: errorKey };
+          break;
+        case 'AxiosError':
+        case 'ParseError':
+          watchedState.feedLoading = { state: 'loadingFailed', error: errorKey };
+          break;
+        default:
+          throw Error(`Unexpected error name <${err.name}>`);
+      }
+    })
+    .finally(() => {
+      watchedState.form = { state: 'filling' };
+      watchedState.feedLoading = { state: 'idling' };
+    });
 };
 
 export const getPostsClickCallback = (watchedState) => (e) => {
   const { target } = e;
   if (!target.hasAttribute('data-id')) return;
   const postId = Number(target.getAttribute('data-id'));
-  const { viewedPostsIds } = watchedState.uiState;
+  const { viewedPostsIds } = watchedState;
   if (!viewedPostsIds.includes(postId)) viewedPostsIds.push(postId);
 };
 
@@ -110,5 +126,5 @@ export const getModalShowCallback = (watchedState) => (e) => {
   const postId = Number(button.getAttribute('data-id'));
   const post = watchedState.posts.find(({ id }) => id === postId);
   const { title, description, link } = post;
-  watchedState.uiState.modalContent = { title, description, link };
+  watchedState.modalContent = { title, description, link };
 };
