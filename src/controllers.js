@@ -15,46 +15,46 @@ const yupSchema = (() => yup.object()
   })
 )();
 
-const downloadContent = (contentUrl) => {
-  const url = `https://allorigins.hexlet.app/get?disableCache=true&url=${encodeURIComponent(contentUrl)}`;
-  return axios
-    .get(url)
-    .then((response) => response.data.contents)
-    .catch((err) => {
-      const e = new Error('contentLoadingError', { cause: err });
-      e.name = err.name;
-      throw e;
-    });
+const downloadContent = async (contentUrl) => {
+  try {
+    const url = `https://allorigins.hexlet.app/get?disableCache=true&url=${encodeURIComponent(contentUrl)}`;
+    const response = await axios.get(url);
+    return response.data.contents;
+  } catch (err) {
+    const e = new Error('contentLoadingError', { cause: err });
+    e.name = err.name;
+    throw e;
+  }
 };
 
-const addNewFeedPosts = (url, watchedState) => downloadContent(url)
-  .then((content) => {
-    const [feedData, postsData] = parseAndExtractData(content);
-    const postIdOffset = watchedState.posts.length;
-    const newFeedId = watchedState.feeds.length;
-    const feed = { ...feedData, id: newFeedId, url };
-    const feedPosts = postsData
-      .map((post, index) => ({ ...post, feedId: newFeedId, id: postIdOffset + index }));
-    watchedState.feeds.push(feed);
-    watchedState.posts.push(...feedPosts);
-  });
+const addNewFeedPosts = async (url, watchedState) => {
+  const content = await downloadContent(url);
+  const [feedData, postsData] = parseAndExtractData(content);
+  const postIdOffset = watchedState.posts.length;
+  const newFeedId = watchedState.feeds.length;
+  const feed = { ...feedData, id: newFeedId, url };
+  const feedPosts = postsData
+    .map((post, index) => ({ ...post, feedId: newFeedId, id: postIdOffset + index }));
+  watchedState.feeds.push(feed);
+  watchedState.posts.push(...feedPosts);
+};
 
-const updateFeedPosts = (feed, watchedState) => downloadContent(feed.url)
-  .then((content) => {
-    const [, postsData] = parseAndExtractData(content);
-    const postIdOffset = watchedState.posts.length;
-    const oldFeedPosts = watchedState.posts
-      .filter(({ feedId }) => feedId === feed.id);
-    const newFeedPosts = postsData
-      .filter((post) => {
-        // All elements of an (feed's) item are optional,
-        // however at least one of title or description must be present:
-        if (post.title) return oldFeedPosts.every(({ title }) => title !== post.title);
-        return oldFeedPosts.every(({ description }) => description !== post.description);
-      })
-      .map((post, index) => ({ ...post, feedId: feed.id, id: postIdOffset + index }));
-    if (newFeedPosts.length) watchedState.posts.push(...newFeedPosts);
-  });
+const updateFeedPosts = async (feed, watchedState) => {
+  const content = await downloadContent(feed.url);
+  const [, postsData] = parseAndExtractData(content);
+  const postIdOffset = watchedState.posts.length;
+  const oldFeedPosts = watchedState.posts
+    .filter(({ feedId }) => feedId === feed.id);
+  const newFeedPosts = postsData
+    .filter((post) => {
+      // All elements of an (feed's) item are optional,
+      // however at least one of title or description must be present:
+      if (post.title) return oldFeedPosts.every(({ title }) => title !== post.title);
+      return oldFeedPosts.every(({ description }) => description !== post.description);
+    })
+    .map((post, index) => ({ ...post, feedId: feed.id, id: postIdOffset + index }));
+  if (newFeedPosts.length) watchedState.posts.push(...newFeedPosts);
+};
 
 /*
 export const setUpdateTimer = (watchedState, updateIntervalMs, startTime = Date.now()) => {
@@ -71,46 +71,42 @@ export const setUpdateTimer = (watchedState, updateIntervalMs, startTime = Date.
 */
 
 export const setUpdateTimer = (watchedState, updateIntervalMs) => {
-  setTimeout(() => {
+  setTimeout(async () => {
     const promises = watchedState.feeds.map((feed) => updateFeedPosts(feed, watchedState));
-    Promise.allSettled(promises)
-      .finally(() => { setUpdateTimer(watchedState, updateIntervalMs); });
+    await Promise.allSettled(promises);
+    setUpdateTimer(watchedState, updateIntervalMs);
   }, updateIntervalMs);
 };
 
-export const getFormSubmitCallback = (watchedState, i18n) => (e) => {
+export const getFormSubmitCallback = (watchedState, i18n) => async (e) => {
   e.preventDefault();
   const url = new FormData(e.target).get('url').trim();
   const urls = _map(watchedState.feeds, 'url');
 
   watchedState.form = { state: 'validating' };
-  yupSchema.validate({ url, urls }, { abortEarly: false })
-    .then(() => {
-      watchedState.form = { state: 'validatingSucceeded' };
-      watchedState.feedLoading = { state: 'loading' };
-      return addNewFeedPosts(url, watchedState);
-    })
-    .then(() => { watchedState.feedLoading = { state: 'loadingSucceeded' }; })
-    .catch((err) => {
-      const errorKey = `feedback.${err.message}`;
-      if (!i18n.exists(errorKey)) throw err;
-      // if (err.cause) console.error(err.cause);
-      switch (err.name) {
-        case 'ValidationError':
-          watchedState.form = { state: 'validatingFailed', error: errorKey };
-          break;
-        case 'AxiosError':
-        case 'ParseError':
-          watchedState.feedLoading = { state: 'loadingFailed', error: errorKey };
-          break;
-        default:
-          throw Error(`Unexpected error name <${err.name}>`);
-      }
-    })
-    .finally(() => {
-      watchedState.form = { state: 'filling' };
-      watchedState.feedLoading = { state: 'idling' };
-    });
+  try {
+    await yupSchema.validate({ url, urls }, { abortEarly: false });
+    watchedState.form = { state: 'validatingSucceeded' };
+    watchedState.feedLoading = { state: 'loading' };
+    await addNewFeedPosts(url, watchedState);
+    watchedState.feedLoading = { state: 'loadingSucceeded' };
+  } catch (err) {
+    const errorKey = `feedback.${err.message}`;
+    if (!i18n.exists(errorKey)) throw err;
+    switch (err.name) {
+      case 'ValidationError':
+        watchedState.form = { state: 'validatingFailed', error: errorKey };
+        break;
+      case 'AxiosError':
+      case 'ParseError':
+        watchedState.feedLoading = { state: 'loadingFailed', error: errorKey };
+        break;
+      default:
+        throw Error(`Unexpected error name <${err.name}>`);
+    }
+  }
+  watchedState.form = { state: 'filling' };
+  watchedState.feedLoading = { state: 'idling' };
 };
 
 export const getPostsClickCallback = (watchedState) => (e) => {

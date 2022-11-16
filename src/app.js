@@ -10,7 +10,7 @@ import {
 const defaultLanguage = 'ru';
 const updateIntervalMs = 5000;
 
-const app = () => {
+const app = async () => {
   const state = {
     feeds: [],
     posts: [],
@@ -39,19 +39,15 @@ const app = () => {
   };
 
   const i18n = i18next.createInstance();
-  // Как только в коде появляется асинхронность, код должен менять свою структуру,
-  // в случае промисов весь код превращается в непрерывную цепочку промисов:
-  i18n
-    .init({ lng: defaultLanguage, debug: false, resources })
-    .then((t) => {
-      console.log(t('translationsLoaded'));
-      setStaticTexts(elements, i18n);
-      const watchedState = onChange(state, getRenderView(elements, i18n));
-      elements.form.addEventListener('submit', getFormSubmitCallback(watchedState, i18n));
-      elements.posts.addEventListener('click', getPostsClickCallback(watchedState));
-      elements.modal.addEventListener('show.bs.modal', getModalShowCallback(watchedState));
-      setUpdateTimer(watchedState, updateIntervalMs);
-    });
+  await i18n.init({ lng: defaultLanguage, debug: false, resources });
+  console.log(i18n.t('translationsLoaded'));
+
+  setStaticTexts(elements, i18n);
+  const watchedState = onChange(state, getRenderView(elements, i18n));
+  elements.form.addEventListener('submit', getFormSubmitCallback(watchedState, i18n));
+  elements.posts.addEventListener('click', getPostsClickCallback(watchedState));
+  elements.modal.addEventListener('show.bs.modal', getModalShowCallback(watchedState));
+  setUpdateTimer(watchedState, updateIntervalMs);
 };
 
 export default app;
