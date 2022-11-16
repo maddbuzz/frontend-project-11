@@ -78,7 +78,7 @@ export const setUpdateTimer = (watchedState, updateIntervalMs) => {
   }, updateIntervalMs);
 };
 
-export const getFormSubmitCallback = (watchedState, i18n) => async (e) => {
+export const getFormSubmitCallback = (watchedState) => async (e) => {
   e.preventDefault();
   const url = new FormData(e.target).get('url').trim();
   const urls = _map(watchedState.feeds, 'url');
@@ -92,7 +92,6 @@ export const getFormSubmitCallback = (watchedState, i18n) => async (e) => {
     watchedState.feedLoading = { state: 'loadingSucceeded' };
   } catch (err) {
     const errorKey = `feedback.${err.message}`;
-    if (!i18n.exists(errorKey)) throw err;
     switch (err.name) {
       case 'ValidationError':
         watchedState.form = { state: 'validatingFailed', error: errorKey };
@@ -102,7 +101,8 @@ export const getFormSubmitCallback = (watchedState, i18n) => async (e) => {
         watchedState.feedLoading = { state: 'loadingFailed', error: errorKey };
         break;
       default:
-        throw Error(`Unexpected error name <${err.name}>`);
+        watchedState.feedLoading = { state: 'loadingFailed', error: err.message };
+        // throw Error(`Unexpected error name <${err.name}>`);
     }
   }
   watchedState.form = { state: 'filling' };

@@ -44,7 +44,7 @@ const app = async () => {
 
   setStaticTexts(elements, i18n);
   const watchedState = onChange(state, getRenderView(elements, i18n));
-  elements.form.addEventListener('submit', getFormSubmitCallback(watchedState, i18n));
+  elements.form.addEventListener('submit', getFormSubmitCallback(watchedState));
   elements.posts.addEventListener('click', getPostsClickCallback(watchedState));
   elements.modal.addEventListener('show.bs.modal', getModalShowCallback(watchedState));
   setUpdateTimer(watchedState, updateIntervalMs);
