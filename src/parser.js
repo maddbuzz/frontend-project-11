@@ -3,21 +3,18 @@ const parseXML = (xmlString) => {
   const xmlDocument = parser.parseFromString(xmlString, 'application/xml');
   const errorNode = xmlDocument.querySelector('parsererror');
   if (errorNode) {
-    const e = new Error('xmlParsingError', { cause: errorNode });
+    const e = new Error(errorNode.textContent);
     e.name = 'ParseError';
     throw e;
   }
   return xmlDocument;
 };
 
-const parseAndExtractData = (content) => {
-  const xmlDocument = parseXML(content);
-
+const extractData = (xmlDocument) => {
   const feedData = {
     title: xmlDocument.querySelector('channel title').textContent,
     description: xmlDocument.querySelector('channel description').textContent,
   };
-
   const items = xmlDocument.querySelectorAll('item');
   // All elements of an item are optional,
   // however at least one of title or description must be present
@@ -26,8 +23,16 @@ const parseAndExtractData = (content) => {
     description: item.querySelector('description').textContent,
     link: item.querySelector('link').textContent,
   }));
-
   return [feedData, postsData];
+};
+
+const parseAndExtractData = (content) => {
+  try {
+    const xmlDocument = parseXML(content);
+    return extractData(xmlDocument);
+  } catch (err) {
+    throw new Error('xmlParsingError', { cause: err });
+  }
 };
 
 export default parseAndExtractData;

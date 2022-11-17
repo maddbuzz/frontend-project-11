@@ -21,9 +21,7 @@ const downloadContent = async (contentUrl) => {
     const response = await axios.get(url);
     return response.data.contents;
   } catch (err) {
-    const e = new Error('contentLoadingError', { cause: err });
-    e.name = err.name;
-    throw e;
+    throw new Error('contentLoadingError', { cause: err });
   }
 };
 
@@ -96,14 +94,13 @@ export const getFormSubmitCallback = (watchedState) => async (e) => {
       case 'ValidationError':
         watchedState.form = { state: 'validatingFailed', error: errorKey };
         break;
-      case 'AxiosError':
-      case 'ParseError':
+      case 'Error': // err.cause: 'AxiosError', 'ParseError', ...
         watchedState.feedLoading = { state: 'loadingFailed', error: errorKey };
         break;
       default:
-        watchedState.feedLoading = { state: 'loadingFailed', error: err.message };
-        // throw Error(`Unexpected error name <${err.name}>`);
+        console.error(err);
     }
+    // if (err.cause) console.error(err.cause);
   }
   watchedState.form = { state: 'filling' };
   watchedState.feedLoading = { state: 'idling' };
